@@ -13,12 +13,12 @@ describe('When orchestrations <- storage |> Todo.Orchestration()',{
     # Then
     orchestrations |> expect.list()
   })
-  it('then orchestrations contain upsertretrieve orchestration',{
+  it('then orchestrations contain upsert.retrieve orchestration',{
     # When
     orchestrations <- storage |> Todo.Orchestration()
 
     # Then
-    orchestrations[['upsertretrieve']] |> expect.exist()
+    orchestrations[['upsert.retrieve']] |> expect.exist()
   })
   it('then orchestrations contain retrieve orchestration',{
     # When
@@ -27,16 +27,16 @@ describe('When orchestrations <- storage |> Todo.Orchestration()',{
     # Then
     orchestrations[['retrieve']] |> expect.exist()
   })
-  it('then orchestrations contain deleteretrieve orchestration',{
+  it('then orchestrations contain delete.retrieve orchestration',{
     # When
     orchestrations <- storage |> Todo.Orchestration()
 
     # Then
-    orchestrations[['deleteretrieve']] |> expect.exist()
+    orchestrations[['delete.retrieve']] |> expect.exist()
   })
 })
 
-describe('When todo |> orchestrate[["upsertretrieve"]]()',{
+describe('When todo |> orchestrate[["upsert.retrieve"]]()',{
   it('then a data.frame with todos containing new todo is returned',{
     # Given    # When
     configuration <- data.frame()
@@ -51,7 +51,7 @@ describe('When todo |> orchestrate[["upsertretrieve"]]()',{
     expected.todo <- new.todo 
 
     # When
-    retrieved.todos <- new.todo |> orchestrate[["upsertretrieve"]]()
+    retrieved.todos <- new.todo |> orchestrate[["upsert.retrieve"]]()
 
     # Then
     retrieved.todos |> expect.contain(expected.todo)
@@ -72,7 +72,7 @@ describe('When todo |> orchestrate[["upsertretrieve"]]()',{
     expected.todo <- updated.todo
 
     # When
-    retrieved.todos <- updated.todo |> orchestrate[['upsertretrieve']]()
+    retrieved.todos <- updated.todo |> orchestrate[['upsert.retrieve']]()
     retrieved.todo  <- retrieved.todos[retrieved.todos[['id']] == updated.todo[['id']],] 
 
     # Then
@@ -104,7 +104,7 @@ describe('When orchestrate[["retrieve"]]()',{
   })
 })
 
-describe("When id |> orchestrate[['deleteretrieve']]()",{
+describe("When id |> orchestrate[['delete.retrieve']]()",{
   it("then a data.frame with todos excluding todo with id is returned",{
     # Given    # When
     configuration <- data.frame()
@@ -117,7 +117,7 @@ describe("When id |> orchestrate[['deleteretrieve']]()",{
     existing.id <- existing.todo[['id']]
 
     # When 
-    retrieved.todos <- existing.id |> orchestrate[['deleteretrieve']]()
+    retrieved.todos <- existing.id |> orchestrate[['delete.retrieve']]()
 
     # Then
     retrieved.todos |> expect.not.contain(existing.todo)

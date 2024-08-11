@@ -4,7 +4,7 @@
 configuration <- data.frame()
 
 storage <- configuration |> Storage::Storage(type = "memory")
-Todo.Mock.Data |> storage[['Seed.Table']]('ToDo')
+Todo.Mock.Data |> storage[['seed.table']]('ToDo')
 
 # configurator <- Storage::ODBC.Configurator()
 # configuration <- configurator$Get.Config(type='Manual')

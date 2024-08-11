@@ -4,7 +4,7 @@ Todo.Controller <- \(id, data) {
     \(input, output, session) {
       # Local State
       state <- reactiveValues()
-      state[["todos"]] <- data[['Retrieve']]()
+      state[["todos"]] <- data[['retrieve']]()
       state[["todo"]]  <- NULL
 
       # Input Binding
@@ -22,7 +22,7 @@ Todo.Controller <- \(id, data) {
       controller <- list()
       controller[['create']] <- \() {
         if (!verify[["taskEmpty"]]()) {
-          state[["todos"]] <- input[["newTask"]] |> Todo.Model() |> data[['UpsertRetrieve']]()
+          state[["todos"]] <- input[["newTask"]] |> Todo.Model() |> data[['upsert.retrieve']]()
           # Clear the input
           session |> updateTextInput("task", value = '')
         }
@@ -42,10 +42,10 @@ Todo.Controller <- \(id, data) {
         state[['todo']][["task"]]   <- input[["task"]]
         state[['todo']][["status"]] <- input[["status"]]
 
-        state[["todos"]] <- state[['todo']] |> data[["UpsertRetrieve"]]()
+        state[["todos"]] <- state[['todo']] |> data[["upsert.retrieve"]]()
       }
       controller[['delete']] <- \() {
-        state[["todos"]] <- state[["todo"]][["id"]] |> data[['DeleteRetrieve']]()
+        state[["todos"]] <- state[["todo"]][["id"]] |> data[['delete.retrieve']]()
       }
 
       # Table Configuration

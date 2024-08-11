@@ -12,7 +12,7 @@ Todo.Orchestration <- \(storage) {
     Todo.Processing()
 
   orchestrations <- list()
-  orchestrations[['upsertretrieve']] <- \(todo) {
+  orchestrations[['upsert.retrieve']] <- \(todo) {
     todo |> process[['upsert']]()
 
     todos <- process[['retrieve']]()
@@ -22,7 +22,7 @@ Todo.Orchestration <- \(storage) {
     todos <- process[['retrieve']]()
     return(todos)
   }
-  orchestrations[['deleteretrieve']] <- \(id) {
+  orchestrations[['delete.retrieve']] <- \(id) {
     id |> process[['remove']]()
 
     todos <- process[['retrieve']]()
