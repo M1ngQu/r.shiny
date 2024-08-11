@@ -65,19 +65,25 @@ getwd()
 # Prints: "C:/Data/Shiny.Todo"
 ```
 
-3. Load `Shiny` Package
+3. Load mock data
+
+```r
+devtools::load_all()
+```
+
+4. Load `Shiny` Package
 
 ```r
 library(shiny)
 ```
 
-4. Run the application:
+5. Run the application:
 
 ```r
 runApp()
 ```
 
-5. Application should open with this screen:
+6. Application should open with this screen:
 
 ![Enterprise Application Hierarchy](/man/figures/App.Final.PNG)
 
