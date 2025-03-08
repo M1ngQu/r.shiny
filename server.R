@@ -4,10 +4,10 @@
 configuration <- data.frame()
 
 storage <- configuration |> Storage::Storage(type = "memory")
-Todo.Mock.Data |> storage[['seed.table']]('ToDo')
+Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
 # configurator <- Storage::ODBC.Configurator()
-# configuration <- configurator$Get.Config(type='Manual')
+# configuration <- configurator[['get.config']](type = 'Manual')
 # storage <- configuration |> Storage::Storage()
 
 # Data Layer

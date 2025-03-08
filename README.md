@@ -2,7 +2,7 @@
 
 This repository contains a sample `Shiny` application which can be used as a boilerplate when developing enterprise-level applications using the R programming languages.
 
-The unique feature of the ToDo App includes a:
+The unique feature of the Todo App includes a:
 
 1. Custom Styling
 2. Custom Shiny Module
@@ -48,7 +48,7 @@ devtools::install_github("https://github.com/FlippieCoetser/Storage")
 4. Clone this repository:
 
 ```bash
-git clone https://github.com/FlippieCoetser/Shiny.ToDo.git
+git clone https://github.com/FlippieCoetser/Shiny.Todo.git
 ```
 
 ### Run Application
@@ -56,7 +56,7 @@ git clone https://github.com/FlippieCoetser/Shiny.ToDo.git
 Follow these steps to run the application:
 
 1. Open your development environment and ensure your working directory is correct.
-   Since the repository is called `Shiny.ToDo`, you should have such a directory in the location where your cloned the repository.
+   Since the repository is called `Shiny.Todo`, you should have such a directory in the location where your cloned the repository.
    In RStudio or VS Code R terminal, you can use `getwd()` and `setwd()` to get or set the current working directory.
    Example:
 
@@ -89,7 +89,7 @@ runApp()
 
 ## Software Architecture
 
-Before jumping into the details of the ToDo Application, it is important to understand the software architecture used. This is best explained by functionally decomposing the application into different layers with accompanying diagrams.
+Before jumping into the details of the Todo Application, it is important to understand the software architecture used. This is best explained by functionally decomposing the application into different layers with accompanying diagrams.
 
 ### Functional Decomposition
 
@@ -119,7 +119,7 @@ For now we return to the typical `shiny` application architecture:
 
 ```r
 header  <- dashboardHeader(
-  title = "ToDo App"
+  title = "Todo App"
 )
 sidebar <- dashboardSidebar(
   disable = TRUE
@@ -192,7 +192,7 @@ Todo.View <- \(id) {
       condition = "output.isSelectedTodoVisible",
       ns = ns,
       fluidRow(
-        box(title = "Selected ToDo",
+        box(title = "Selected Todo",
             status = "primary",
             solidHeader = TRUE,
             textInput(ns("task"), "Task"),

@@ -7,4 +7,4 @@ SELECT
   LOWER([Id]) as Id, 
   [Task], 
   [Status]  
-FROM [dbo].[ToDo]
+FROM [dbo].[Todo]

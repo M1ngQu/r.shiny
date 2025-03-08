@@ -7,5 +7,5 @@ SELECT
   LOWER([Id]) as Id, 
   [Task], 
   [Status]
-FROM [dbo].[ToDo]
+FROM [dbo].[Todo]
 WHERE [Id] = '4a0ec243-78ff-4461-8696-c41e7d64e108'

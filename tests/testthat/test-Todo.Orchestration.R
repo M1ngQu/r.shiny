@@ -41,7 +41,7 @@ describe('When todo |> orchestrate[["upsert.retrieve"]]()',{
     # Given    # When
     configuration <- data.frame()
     storage <- configuration |> Storage::Storage('memory')
-    Todo.Mock.Data |> storage[['seed.table']]('ToDo')
+    Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
     orchestrate <- storage |> Todo.Orchestration()
 
@@ -60,7 +60,7 @@ describe('When todo |> orchestrate[["upsert.retrieve"]]()',{
     # Given    # When
     configuration <- data.frame()
     storage <- configuration |> Storage::Storage('memory')
-    Todo.Mock.Data |> storage[['seed.table']]('ToDo')
+    Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
     orchestrate <- storage |> Todo.Orchestration()
 
@@ -89,7 +89,7 @@ describe('When orchestrate[["retrieve"]]()',{
     # Given    # When
     configuration <- data.frame()
     storage <- configuration |> Storage::Storage('memory')
-    Todo.Mock.Data |> storage[['seed.table']]('ToDo')
+    Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
     orchestrate <- storage |> Todo.Orchestration()
 
@@ -109,7 +109,7 @@ describe("When id |> orchestrate[['delete.retrieve']]()",{
     # Given    # When
     configuration <- data.frame()
     storage <- configuration |> Storage::Storage('memory')
-    Todo.Mock.Data |> storage[['seed.table']]('ToDo')
+    Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
     orchestrate <- storage |> Todo.Orchestration()
 

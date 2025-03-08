@@ -4,7 +4,7 @@ This script was used to create the table in azure sql database.
 It is meant to be used as an example only. 
 */
 
-CREATE TABLE [dbo].[ToDo] (
+CREATE TABLE [dbo].[Todo] (
   [Id]     UNIQUEIDENTIFIER NOT NULL,
   [Task]   NVARCHAR (100)   NOT NULL,
 	[Status] NVARCHAR (100)   NOT NULL

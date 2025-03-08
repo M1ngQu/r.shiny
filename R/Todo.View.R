@@ -22,7 +22,7 @@ Todo.View <- \(id) {
       condition = "output.isSelectedTodoVisible",
       ns = ns,
       fluidRow(
-        box(title = "Selected ToDo",
+        box(title = "Selected Todo",
             status = "primary",
             solidHeader = TRUE,
             textInput(ns("task"), "Task"),
