@@ -9,6 +9,8 @@ on:
 jobs:
     build-and-deploy:
         runs-on: ubuntu-latest
+        env:
+          RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
         steps:
         # Checkout the repo
         - name: 'Checkout GitHub Action'
@@ -20,12 +22,22 @@ jobs:
           with:
             r-version: 'release'
 
+        # Install system dependencies
+        - name: 'Install system dependencies'
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends \
+              libcurl4-openssl-dev \
+              libssl-dev \
+              libxml2-dev \
+              libgit2-dev
+
         # Cache R packages
         - name: 'Cache R packages'
           uses: actions/cache@v3
           with:
-            path: ~/.local/share/renv
-            key: ${{ runner.os }}-renv-${{ hashFiles('**/renv.lock') }}
+            path: renv/library
+            key: ${{ runner.os }}-renv-${{ hashFiles('renv.lock') }}
             restore-keys: ${{ runner.os }}-renv-
           
         - name: 'Login via Azure CLI'
@@ -36,24 +48,31 @@ jobs:
         - name: 'Build and push image'
           uses: azure/docker-login@v1
           with:
-            login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-            username: ${{ secrets.REGISTRY_USERNAME }}
-            password: ${{ secrets.REGISTRY_PASSWORD }}
+            login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+            username: ${{ secrets.ACR_USERNAME }}
+            password: ${{ secrets.ACR_PASSWORD }}
         - run: |
-            docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
-            docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+            docker build . -t ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+            docker push ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
 
         - name: 'Deploy to Azure Container Instances'
           uses: 'azure/aci-deploy@v1'
           with:
-            resource-group: ${{ secrets.RESOURCE_GROUP }}
+            resource-group: ${{ env.RESOURCE_GROUP }}
             dns-name-label: r-shiny-${{ github.run_number }}
-            image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
-            registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-            registry-username: ${{ secrets.REGISTRY_USERNAME }}
-            registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+            image: ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+            registry-login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+            registry-username: ${{ secrets.ACR_USERNAME }}
+            registry-password: ${{ secrets.ACR_PASSWORD }}
             name: r-shiny-app
             location: 'eastus'
             ports: 3838
             cpu: 1
             memory: 1.5
+
+        # Health check
+        - name: 'Health check'
+          run: |
+            echo "Waiting for container to start..."
+            sleep 30
+            curl -f http://r-shiny-${{ github.run_number }}.eastus.azurecontainer.io:3838 || exit 1
