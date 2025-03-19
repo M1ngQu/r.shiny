@@ -61,6 +61,7 @@ After the script runs, you need to add the output information to your GitHub rep
    - `ACR_LOGIN_SERVER`: ACR login server address
    - `ACR_USERNAME`: ACR username
    - `ACR_PASSWORD`: ACR password
+   - `RESOURCE_GROUP`: Name of the Azure resource group
 
 ## GitHub Actions Workflow Configuration
 
@@ -79,7 +80,6 @@ To remove all created Azure resources:
 ```
 
 This script will:
-- Save the latest Docker image locally (optional)
 - Delete the service principal
 - Delete the resource group (including ACR)
 

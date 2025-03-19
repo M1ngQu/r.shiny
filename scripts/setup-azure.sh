@@ -44,13 +44,18 @@ az role assignment create \
 
 # Output values to be added to GitHub Secrets
 echo "Please add the following values to your GitHub repository Secrets:"
+
 echo "AZURE_CREDENTIALS={"
- echo "  \"clientId\": \"$SP_APP_ID\","
- echo "  \"clientSecret\": \"$SP_PASSWORD\","
- echo "  \"subscriptionId\": \"$(az account show --query id -o tsv)\","
- echo "  \"tenantId\": \"$(az account show --query tenantId -o tsv)\""
- echo "}"
+echo "  \"clientId\": \"$SP_APP_ID\","
+echo "  \"clientSecret\": \"$SP_PASSWORD\","
+echo "  \"subscriptionId\": \"$(az account show --query id -o tsv)\","
+echo "  \"tenantId\": \"$(az account show --query tenantId -o tsv)\""
+echo "}"
+
+echo "\nAdd these secrets separately:"
 echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
 echo "ACR_USERNAME=$ACR_USERNAME"
 echo "ACR_PASSWORD=$ACR_PASSWORD"
 echo "RESOURCE_GROUP=$RESOURCE_GROUP"
+
+echo "\nMake sure to add all these secrets to your GitHub repository before running the workflow."
