@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: R Shiny App CI/CD Pipeline
 
 on:
   push:
@@ -7,72 +7,144 @@ on:
     branches: [ main ]
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
-        env:
-          RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-        steps:
-        # Checkout the repo
-        - name: 'Checkout GitHub Action'
-          uses: actions/checkout@main
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      APP_SERVICE_NAME: ${{ secrets.APP_SERVICE_NAME }}
+      LOCATION: eastus
+    
+    steps:
+      # 检出代码
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@main
 
-        # Setup R environment
-        - name: 'Setup R environment'
-          uses: r-lib/actions/setup-r@v2
-          with:
-            r-version: 'release'
+      # 设置 R 环境
+      - name: 'Setup R environment'
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
 
-        # Install system dependencies
-        - name: 'Install system dependencies'
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends \
-              libcurl4-openssl-dev \
-              libssl-dev \
-              libxml2-dev \
-              libgit2-dev
+      # 安装系统依赖
+      - name: 'Install system dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libxml2-dev \
+            libgit2-dev
 
-        # Cache R packages
-        - name: 'Cache R packages'
-          uses: actions/cache@v3
-          with:
-            path: renv/library
-            key: ${{ runner.os }}-renv-${{ hashFiles('renv.lock') }}
-            restore-keys: ${{ runner.os }}-renv-
-          
-        - name: 'Login via Azure CLI'
-          uses: azure/login@v1
-          with:
-            creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # 缓存 R 包
+      - name: 'Cache R packages'
+        uses: actions/cache@v3
+        with:
+          path: renv/library
+          key: ${{ runner.os }}-renv-${{ hashFiles('renv.lock') }}
+          restore-keys: ${{ runner.os }}-renv-
         
-        - name: 'Build and push image'
-          uses: azure/docker-login@v1
-          with:
-            login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-            username: ${{ secrets.ACR_USERNAME }}
-            password: ${{ secrets.ACR_PASSWORD }}
-        - run: |
-            docker build . -t ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
-            docker push ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+      # 登录 Azure
+      - name: 'Login via Azure CLI'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      # 构建并推送 Docker 镜像
+      - name: 'Build and push image'
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - run: |
+          # 构建镜像时添加版本标签和最新标签
+          docker build . -t ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+          docker tag ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }} ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:latest
+          
+          # 推送两个标签的镜像
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:latest
 
-        - name: 'Deploy to Azure Container Instances'
-          uses: 'azure/aci-deploy@v1'
-          with:
-            resource-group: ${{ env.RESOURCE_GROUP }}
-            dns-name-label: r-shiny-${{ github.run_number }}
-            image: ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
-            registry-login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-            registry-username: ${{ secrets.ACR_USERNAME }}
-            registry-password: ${{ secrets.ACR_PASSWORD }}
-            name: r-shiny-app
-            location: 'eastus'
-            ports: 3838
-            cpu: 1
-            memory: 1.5
+      # 首次部署：检查应用服务是否存在，不存在则创建
+      - name: 'Check if App Service exists'
+        id: check_app
+        continue-on-error: true
+        run: |
+          APP_EXISTS=$(az webapp show --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query name -o tsv 2>/dev/null || echo "")
+          if [ -z "$APP_EXISTS" ]; then
+            echo "app_exists=false" >> $GITHUB_OUTPUT
+          else
+            echo "app_exists=true" >> $GITHUB_OUTPUT
+          fi
 
-        # Health check
-        - name: 'Health check'
-          run: |
-            echo "Waiting for container to start..."
-            sleep 30
-            curl -f http://r-shiny-${{ github.run_number }}.eastus.azurecontainer.io:3838 || exit 1
+      # 如果应用服务不存在，则创建资源
+      - name: 'Create App Service resources if needed'
+        if: steps.check_app.outputs.app_exists == 'false'
+        run: |
+          # 创建App Service计划
+          az appservice plan create \
+            --name r-shiny-plan \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --sku S1 \
+            --is-linux
+
+          # 创建Web应用
+          az webapp create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --plan r-shiny-plan \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --deployment-container-image-name ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:latest
+
+          # 配置容器注册表认证
+          az webapp config container set \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --docker-custom-image-name ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:latest \
+            --docker-registry-server-url https://${{ secrets.ACR_LOGIN_SERVER }} \
+            --docker-registry-server-user ${{ secrets.ACR_USERNAME }} \
+            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
+            
+          # 配置应用设置
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --settings \
+              WEBSITES_PORT=3838 \
+              WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
+
+      # 更新已存在的应用服务
+      - name: 'Update App Service container'
+        if: steps.check_app.outputs.app_exists == 'true'
+        run: |
+          # 更新容器镜像
+          az webapp config container set \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --docker-custom-image-name ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}
+            
+          # 重启应用以应用更改
+          az webapp restart \
+            --name ${{ env.APP_SERVICE_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }}
+
+      # 健康检查
+      - name: 'Health check'
+        run: |
+          # 获取App Service URL
+          APP_URL=$(az webapp show --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query defaultHostName --output tsv)
+          
+          echo "Waiting for app to start..."
+          sleep 60
+          
+          # 进行健康检查
+          curl -f https://$APP_URL || exit 1
+          
+          echo "App is healthy and accessible at: https://$APP_URL"
+          echo "APP_URL=https://$APP_URL" >> $GITHUB_ENV
+
+      # 输出部署结果
+      - name: 'Deployment Summary'
+        run: |
+          echo "::notice::R Shiny App deployed successfully!"
+          echo "::notice::App URL: ${{ env.APP_URL }}"
+          echo "::notice::Image: ${{ secrets.ACR_LOGIN_SERVER }}/r-shiny:${{ github.sha }}"
