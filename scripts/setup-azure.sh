@@ -1,61 +1,49 @@
 #!/bin/bash
+set -e
 
-# Set variables
+# setting up variables
 RESOURCE_GROUP="r-shiny-rg"
 LOCATION="eastus"
 ACR_NAME="rshinycr"
+APP_SERVICE_NAME="r-shiny-app"
+APP_SERVICE_PLAN="r-shiny-plan"
 SERVICE_PRINCIPAL_NAME="r-shiny-sp"
 
-# Create resource group
+# create resource group
+echo "Creating resource group: $RESOURCE_GROUP"
 az group create --name $RESOURCE_GROUP --location $LOCATION
 
-# Create Azure Container Registry
+# create Azure Container Registry
+echo "Creating Azure Container Registry: $ACR_NAME"
 az acr create \
   --resource-group $RESOURCE_GROUP \
   --name $ACR_NAME \
   --sku Standard \
   --admin-enabled true
 
-# Get ACR login server
-ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer --output tsv)
+# get ACR credentials
+ACR_USERNAME=$(az acr credential show -n $ACR_NAME --query username -o tsv)
+ACR_PASSWORD=$(az acr credential show -n $ACR_NAME --query passwords[0].value -o tsv)
+ACR_LOGIN_SERVER=$(az acr show -n $ACR_NAME --query loginServer -o tsv)
 
-# Get ACR admin credentials
-ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username --output tsv)
-ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" --output tsv)
-
-# Create service principal and assign permissions
-SP_PASSWORD=$(az ad sp create-for-rbac \
+# create service principal for GitHub Actions access
+echo "Creating service principal: $SERVICE_PRINCIPAL_NAME"
+SP_JSON=$(az ad sp create-for-rbac \
   --name $SERVICE_PRINCIPAL_NAME \
   --role contributor \
   --scopes /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RESOURCE_GROUP \
-  --query password \
-  --output tsv)
+  --sdk-auth)
 
-SP_APP_ID=$(az ad sp list \
-  --display-name $SERVICE_PRINCIPAL_NAME \
-  --query "[].appId" \
-  --output tsv)
-
-# Assign ACR permissions to service principal
-az role assignment create \
-  --assignee $SP_APP_ID \
-  --role AcrPush \
-  --scope /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME
-
-# Output values to be added to GitHub Secrets
-echo "Please add the following values to your GitHub repository Secrets:"
-
-echo "AZURE_CREDENTIALS={"
-echo "  \"clientId\": \"$SP_APP_ID\","
-echo "  \"clientSecret\": \"$SP_PASSWORD\","
-echo "  \"subscriptionId\": \"$(az account show --query id -o tsv)\","
-echo "  \"tenantId\": \"$(az account show --query tenantId -o tsv)\""
-echo "}"
-
-echo "\nAdd these secrets separately:"
+# output values to be added to GitHub Secrets
+echo ""
+echo "============= GitHub Secrets ============="
+echo "Please add the following secrets to your GitHub repository:"
+echo ""
+echo "RESOURCE_GROUP=$RESOURCE_GROUP"
+echo "APP_SERVICE_NAME=$APP_SERVICE_NAME"
 echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
 echo "ACR_USERNAME=$ACR_USERNAME"
 echo "ACR_PASSWORD=$ACR_PASSWORD"
-echo "RESOURCE_GROUP=$RESOURCE_GROUP"
-
-echo "\nMake sure to add all these secrets to your GitHub repository before running the workflow."
+echo "AZURE_CREDENTIALS=$SP_JSON"
+echo ""
+echo "==========================================="
