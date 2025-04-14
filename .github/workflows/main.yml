@@ -1,4 +1,4 @@
-# GitHub Actions 完整部署流程
+# GitHub Actions Workflow for Full Deployment
 name: Deploy RShiny App with Azure AD Auth + KeyVault
 on:
   push:
@@ -33,14 +33,14 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        echo "🐳 构建并推送Docker镜像到 $ACR_LOGIN_SERVER"
+        echo "🐳 Build and push Docker image to $ACR_LOGIN_SERVER"
         az acr login --name $ACR_NAME
         docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:latest .
         docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
 
     - name: Update container settings for App Service
       run: |
-        echo "🔄 更新Web App的容器设置"
+        echo "🔄 Update container settings for Web App"
         az webapp config container set \
           --name $WEBAPP_NAME \
           --resource-group $RESOURCE_GROUP \
@@ -49,8 +49,7 @@ jobs:
 
     - name: Configure Key Vault references in App Service
       run: |
-        echo "🔑 配置App Service使用Key Vault引用"
-        # 设置应用程序配置以使用Key Vault引用
+        echo "🔑 Configure Key Vault references in App Service"
         az webapp config appsettings set \
           --name $WEBAPP_NAME \
           --resource-group $RESOURCE_GROUP \
@@ -59,8 +58,7 @@ jobs:
 
     - name: Configure Azure AD Authentication
       run: |
-        echo "🔐 配置Azure AD认证"
-        # 从KeyVault获取系统托管身份的权限已在setup脚本中设置
+        echo "🔐 Configure Azure AD Authentication"
         az webapp auth update \
           --name $WEBAPP_NAME \
           --resource-group $RESOURCE_GROUP \
@@ -72,15 +70,13 @@ jobs:
 
     - name: Restart App Service
       run: |
-        echo "🔄 重启App Service以应用更改"
+        echo "🔄 Restart App Service to apply changes"
         az webapp restart --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
 
     - name: Verify deployment
       run: |
-        echo "✅ 验证部署"
+        echo "✅ Verify deployment"
         APP_URL=$(az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query defaultHostName -o tsv)
-        echo "应用已部署到: https://$APP_URL"
-        # 等待应用启动
+        echo "Application deployed at: https://$APP_URL"
         sleep 30
-        # 尝试访问应用健康检查端点
-        curl -s -o /dev/null -w "%{http_code}" https://$APP_URL/health || echo "应用可能需要更多时间启动"
+        curl -s -o /dev/null -w "%{http_code}" https://$APP_URL/health || echo "Application may need more time to start"
