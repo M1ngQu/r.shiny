@@ -6,9 +6,9 @@ configuration <- data.frame()
 storage <- configuration |> Storage::Storage(type = "memory")
 Todo.Mock.Data |> storage[['seed.table']]('Todo')
 
-# configurator <- Storage::ODBC.Configurator()
-# configuration <- configurator[['get.config']](type = 'Preset')
-# storage <- configuration |> Storage::Storage()
+configurator <- Storage::ODBC.Configurator()
+configuration <- configurator[['get.config']](type = 'Preset')
+storage <- configuration |> Storage::Storage()
 
 # Data Layer
 data  <- storage |> Todo.Orchestration()

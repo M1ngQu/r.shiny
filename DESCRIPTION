@@ -22,12 +22,14 @@ Imports:
     Storage,
     dplyr,
     DT,
+    LogicPackage
 Remotes: 
     scalable-software/Validate,
     FlippieCoetser/Environment,
     FlippieCoetser/Query,
-    FlippieCoetser/Storage
+    FlippieCoetser/Storage,
+    M1ngQu/r.package
 Suggests:
     shinytest2,
-    uuid,
+    uuid
 Config/testthat/edition: 3

@@ -1,3 +1,11 @@
+# Build docker image
+
+```bash
+docker build --platform=linux/amd64 --build-arg GITHUB_PAT=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 -t todo-app .
+```
+
+
+
 # Interactive Applications in R
 
 This repository contains a sample `Shiny` application which can be used as a boilerplate when developing enterprise-level applications using the R programming languages.
@@ -371,10 +379,11 @@ Also, if you look closely at the `Todo.Controller` code previously presented, yo
 3. Update Todo: `state[["todos"]] <- state[['todo']] |> data[["UpsertRetrieve"]]()`
 4. Delete Todo: `state[["todos"]] <- state[["todo"]][["Id"]] |> data[['DeleteRetrieve']]()`
 
-</details>
+</details> 
 
 The complete sample application architecture is presented below:
 
 ![Architecture](/man/figures//Custom.Data.Layer.png)
 
 Application architecture is a complex topic. This section aimed to provide a high-level overview of enterprise-level software development with a focus on R and its ecosystem. The information presented is simplified and generalized as much as possible. The best way to learn Shiny is by experimenting: clone the sample application and start playing with the code.
+ 
