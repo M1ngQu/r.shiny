@@ -14,7 +14,7 @@ env:
   WEBAPP_NAME: "shiny-web-app"
   KEYVAULT_NAME: "my-shiny-keyvault"
   SECRET_NAME: "aad-client-secret"
-  IMAGE_NAME: "shinyapp"
+  IMAGE_NAME: "todo-app"
   AAD_CLIENT_ID: ${{ secrets.AAD_CLIENT_ID }}
   AAD_ISSUER_URL: "https://sts.windows.net/${{ secrets.AZURE_TENANT_ID }}/"
   TOKEN_AUDIENCE: "api://${{ secrets.AAD_CLIENT_ID }}"
