@@ -18,10 +18,10 @@ ENV GITHUB_PAT=${GITHUB_PAT}
 RUN R -e 'install.packages(c("devtools", "shiny", "shinydashboard", "dplyr", "DT", "shinytest2", "uuid"))'
 
 # Install packages from GitHub
-RUN R -e 'devtools::install_github(c("FlippieCoetser/Validate", "FlippieCoetser/Environment", "FlippieCoetser/Query", "FlippieCoetser/Storage"))'
+RUN R -e 'devtools::install_github(c("FlippieCoetser/Storage"))'
 
 # Install packages from GitHub private repo
-RUN R -e "devtools::install_github('M1ngQu/r.package', auth_token=Sys.getenv('GITHUB_PAT'))"
+RUN R -e "devtools::install_github(c('M1ngQu/r.package', 'Ri-tsuka/Validate', 'Ri-tsuka/Environment', 'Ri-tsuka/Query'), auth_token=Sys.getenv('GITHUB_PAT'))"
 
 # Stage 2: Final stage with ODBC driver setup
 FROM rocker/shiny:latest
