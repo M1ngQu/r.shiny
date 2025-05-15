@@ -59,21 +59,19 @@ jobs:
             "AAD_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://$KEYVAULT_NAME.vault.azure.net/secrets/$SECRET_NAME/)"
 
     - name: Configure Azure AD Authentication
-      env:
-        AAD_CLIENT_ID: ${{ secrets.AAD_CLIENT_ID }}
       run: |
         echo "🔐 Configure Azure AD Authentication"
         az webapp auth update \
           --name $WEBAPP_NAME \
           --resource-group $RESOURCE_GROUP \
           --enabled true \
-          --action RedirectToLoginPage \
+          --action LoginWithAzureActiveDirectory \
           --aad-client-id $AAD_CLIENT_ID \
           --aad-token-issuer-url $AAD_ISSUER_URL \
           --aad-allowed-token-audiences $TOKEN_AUDIENCE \
           --token-store false \
           --login-parameters "prompt=select_account&domain_hint=consumers"
-          
+       
     - name: Configure Azure AD App to allow Microsoft personal accounts
       run: |
         echo "🔄 Configuring Azure AD App to allow Microsoft personal accounts"
