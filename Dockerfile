@@ -11,10 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 #set GitHub	PAT
-ARG GITHUB_PAT
+ARG GITHUB1_PAT
 ARG GITHUB2_PAT
-ENV GITHUB_PAT=${GITHUB_PAT}
-ENV GITHUB2_PAT=${GITHUB2_PAT}
+
 
 # Install R packages
 RUN R -e 'install.packages(c("devtools", "shiny", "shinydashboard", "dplyr", "DT", "shinytest2", "uuid"))'
@@ -23,7 +22,9 @@ RUN R -e 'install.packages(c("devtools", "shiny", "shinydashboard", "dplyr", "DT
 RUN R -e 'devtools::install_github(c("FlippieCoetser/Storage"))'
 
 # Install packages from GitHub private repo
-RUN R -e "devtools::install_github(c('M1ngQu/r.package', 'Ri-tsuka/Validate', 'Ri-tsuka/Environment', 'Ri-tsuka/Query'), auth_token=Sys.getenv('GITHUB_PAT'))"
+RUN GITHUB_PAT=${GITHUB1_PAT} R -e "devtools::install_github('M1ngQu/r.package')"
+RUN GITHUB_PAT=${GITHUB2_PAT} R -e "devtools::install_github(c('Ri-tsuka/Validate', 'Ri-tsuka/Environment', 'Ri-tsuka/Query'))"
+
 
 # Stage 2: Final stage with ODBC driver setup
 FROM rocker/shiny:latest
