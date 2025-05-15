@@ -24,9 +24,9 @@ Imports:
     DT,
     LogicPackage
 Remotes: 
-    scalable-software/Validate,
-    FlippieCoetser/Environment,
-    FlippieCoetser/Query,
+    Ri-tsuka/Validate,
+    Ri-tsuka/Environment,
+    Ri-tsuka/Query,
     FlippieCoetser/Storage,
     M1ngQu/r.package
 Suggests:
