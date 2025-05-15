@@ -63,8 +63,7 @@ jobs:
             --aad-client-id "${{ secrets.AAD_CLIENT_ID }}" \
             --aad-token-issuer-url "https://sts.windows.net/${{ secrets.AZURE_TENANT_ID }}/" \
             --aad-allowed-token-audiences "api://${{ secrets.AAD_CLIENT_ID }}" \
-            --token-store false \
-            --login-parameters "prompt=select_account&domain_hint=consumers"
+            --token-store false
 
       - name: Restart App Service
         run: |
