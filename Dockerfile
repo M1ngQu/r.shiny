@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 #set GitHub	PAT
 ARG GITHUB_PAT
+ARG GITHUB2_PAT
 ENV GITHUB_PAT=${GITHUB_PAT}
+ENV GITHUB2_PAT=${GITHUB2_PAT}
 
 # Install R packages
 RUN R -e 'install.packages(c("devtools", "shiny", "shinydashboard", "dplyr", "DT", "shinytest2", "uuid"))'
