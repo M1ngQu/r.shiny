@@ -63,8 +63,7 @@ jobs:
             --resource-group $RESOURCE_GROUP \
             --enabled true \
             --unauthenticated-client-action AllowAnonymous \
-            --enable-token-store false \
-            --yes
+            --enable-token-store false
 
           echo "Configuring Microsoft Identity Provider"
           az webapp auth microsoft update \
@@ -80,8 +79,7 @@ jobs:
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --redirect-provider AzureActiveDirectory \
-            --unauthenticated-client-action RedirectToLoginPage \
-            --yes
+            --unauthenticated-client-action RedirectToLoginPage
 
       - name: Restart App Service
         run: |
