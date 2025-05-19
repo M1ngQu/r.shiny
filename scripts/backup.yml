@@ -1,0 +1,93 @@
+# GitHub Actions Workflow for Full Deployment
+name: Deploy RShiny App with Azure AD Auth + KeyVault
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: "r-shiny-rg"
+  LOCATION: "australiasoutheast"
+  ACR_NAME: "rshinycr"
+  ACR_LOGIN_SERVER: "rshinycr.azurecr.io"
+  APP_SERVICE_PLAN: "shiny-plan"
+  WEBAPP_NAME: "shiny-web-app"
+  KEYVAULT_NAME: "my-shiny-keyvault"
+  SECRET_NAME: "aad-client-secret"
+  IMAGE_NAME: "todo-app"
+  AAD_ISSUER_URL: "https://sts.windows.net/${{ secrets.AZURE_TENANT_ID }}/"
+  TOKEN_AUDIENCE: "api://${{ secrets.AAD_CLIENT_ID }}"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push Docker image
+      run: |
+        echo "🐳 Build and push Docker image to $ACR_LOGIN_SERVER"
+        az acr login --name $ACR_NAME
+        docker build \
+          --build-arg GITHUB1_PAT=${{ secrets.GITHUB1_PAT }} \
+          --build-arg GITHUB2_PAT=${{ secrets.GITHUB2_PAT }} \
+          -t $ACR_LOGIN_SERVER/$IMAGE_NAME:latest .
+        docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
+
+    - name: Update container settings for App Service
+      run: |
+        echo "🔄 Update container settings for Web App"
+        az webapp config container set \
+          --name $WEBAPP_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --docker-custom-image-name $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
+          --docker-registry-server-url https://$ACR_LOGIN_SERVER
+
+    - name: Configure Key Vault references in App Service
+      run: |
+        echo "🔑 Configure Key Vault references in App Service"
+        az webapp config appsettings set \
+          --name $WEBAPP_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --settings \
+            "AAD_CLIENT_SECRET=@Microsoft.KeyVault(SecretUri=https://$KEYVAULT_NAME.vault.azure.net/secrets/$SECRET_NAME/)"
+
+    - name: Configure Azure AD Authentication
+      run: |
+        echo "🔐 Configure Azure AD Authentication"
+        az webapp auth update \
+          --name $WEBAPP_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --enabled true \
+          --action LoginWithAzureActiveDirectory \
+          --aad-client-id $AAD_CLIENT_ID \
+          --aad-token-issuer-url $AAD_ISSUER_URL \
+          --aad-allowed-token-audiences $TOKEN_AUDIENCE \
+          --token-store false \
+          --login-parameters "prompt=select_account&domain_hint=consumers"
+       
+    - name: Configure Azure AD App to allow Microsoft personal accounts
+      run: |
+        echo "🔄 Configuring Azure AD App to allow Microsoft personal accounts"
+        az ad app update \
+          --id $AAD_CLIENT_ID \
+          --sign-in-audience "AzureADandPersonalMicrosoftAccount"
+
+    - name: Restart App Service
+      run: |
+        echo "🔄 Restart App Service to apply changes"
+        az webapp restart --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
+
+    - name: Verify deployment
+      run: |
+        echo "✅ Verify deployment"
+        APP_URL=$(az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query defaultHostName -o tsv)
+        echo "Application deployed at: https://$APP_URL"
+        sleep 30
+        curl -s -o /dev/null -w "%{http_code}" https://$APP_URL/health || echo "Application may need more time to start"
