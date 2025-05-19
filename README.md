@@ -1,9 +1,3 @@
-# Build docker image
-
-```bash
-docker build --platform=linux/amd64 --build-arg GITHUB_PAT=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 -t todo-app .
-```
-
 
 
 # Interactive Applications in R
