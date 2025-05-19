@@ -62,8 +62,8 @@ jobs:
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --enabled true \
-            --action AllowAnonymous \
-            --token-store false \
+            --unauthenticated-client-action AllowAnonymous \
+            --enable-token-store false \
             --yes
 
           echo "Configuring Microsoft Identity Provider"
