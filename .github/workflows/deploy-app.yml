@@ -33,6 +33,9 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Install authV2 Azure CLI extension
+        run: az extension add --name authV2 --yes
+
       - name: Update container settings for App Service
         run: |
           echo "🔄 Update container settings for Web App"
@@ -54,15 +57,31 @@ jobs:
       - name: Configure Azure AD Authentication
         run: |
           echo "🔐 Configure Azure AD Authentication"
+          echo "Enabling AuthV2 and setting token store to false"
           az webapp auth update \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
             --enabled true \
-            --action LoginWithAzureActiveDirectory \
-            --aad-client-id "${{ secrets.AAD_CLIENT_ID }}" \
-            --aad-token-issuer-url "https://sts.windows.net/${{ secrets.AZURE_TENANT_ID }}/" \
-            --aad-allowed-token-audiences "api://${{ secrets.AAD_CLIENT_ID }}" \
-            --token-store false
+            --action AllowAnonymous \
+            --token-store false \
+            --yes
+
+          echo "Configuring Microsoft Identity Provider"
+          az webapp auth microsoft update \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --client-id "${{ secrets.AAD_CLIENT_ID }}" \
+            --issuer "https://sts.windows.net/${{ secrets.AZURE_TENANT_ID }}/" \
+            --allowed-audiences "api://${{ secrets.AAD_CLIENT_ID }}" \
+            --yes
+          
+          echo "Setting default provider to AzureActiveDirectory and unauthenticated client action"
+          az webapp auth update \
+            --name $WEBAPP_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --redirect-provider AzureActiveDirectory \
+            --unauthenticated-client-action RedirectToLoginPage \
+            --yes
 
       - name: Restart App Service
         run: |
