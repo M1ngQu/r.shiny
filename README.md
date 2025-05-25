@@ -380,4 +380,240 @@ The complete sample application architecture is presented below:
 ![Architecture](/man/figures//Custom.Data.Layer.png)
 
 Application architecture is a complex topic. This section aimed to provide a high-level overview of enterprise-level software development with a focus on R and its ecosystem. The information presented is simplified and generalized as much as possible. The best way to learn Shiny is by experimenting: clone the sample application and start playing with the code.
+
+## Cloud Deployment
+
+This application can be deployed to Azure using the provided scripts and GitHub Actions workflows. This section explains the deployment process and infrastructure setup for production environments.
+
+### Azure Infrastructure Setup
+
+The project includes bash scripts to provision and manage the required Azure infrastructure:
+
+#### Setup Azure Resources
+
+Use the `scripts/setup-azure.sh` script to create all necessary Azure resources:
+
+```bash
+# Run from bash terminal or WSL
+./scripts/setup-azure.sh
+```
+
+This script creates the following resources:
+
+- Resource Group (`r-shiny-rg`)
+- Azure Container Registry (`rshinycr.azurecr.io`)
+- App Service Plan (Linux-based)
+- Web App configured for containers
+- Azure AD App Registration for authentication
+- Key Vault for securely storing secrets
+- Managed Identity for the Web App
+
+After running the script, it will output all the credentials needed for GitHub Actions configuration and application settings.
+
+#### Clean Up Azure Resources
+
+When you're done with the environment, you can remove all resources using:
+
+```bash
+# Run from bash terminal or WSL
+./scripts/cleanup-azure.sh
+```
+
+### Containerization
+
+The application is containerized using Docker. The `Dockerfile` in the root of the repository defines how the R Shiny application is packaged into a container image.
+
+#### Dockerfile Structure
+
+The Dockerfile uses a multi-stage build approach to optimize the final image size and improve security:
+
+1. **Builder Stage**: Uses `rocker/r-ver` as base image to install R packages
+2. **Final Stage**: Uses `rocker/shiny` as the base image for the application
+
+Here's a breakdown of the key sections in our Dockerfile:
+
+```dockerfile
+# Stage 1: Build stage
+FROM rocker/r-ver:latest AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libgit2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set GitHub PAT
+ARG GITHUB1_PAT
+ARG GITHUB2_PAT
+
+# Install R packages
+RUN R -e 'install.packages(c("devtools", "shiny", "shinydashboard", "dplyr", "DT", "shinytest2", "uuid"))'
+
+# Install packages from GitHub
+RUN R -e 'devtools::install_github(c("FlippieCoetser/Storage"))'
+
+# Stage 2: Final stage with ODBC driver setup
+FROM rocker/shiny:latest
+
+# Copy R packages from builder
+COPY --from=builder /usr/local/lib/R/site-library /usr/local/lib/R/site-library
+
+# Install Microsoft ODBC Driver for SQL Server
+# ... ODBC setup commands ...
+
+# Copy all application files
+COPY . /srv/shiny-server/
+```
+
+#### ODBC Configuration
+
+The application is configured to connect to databases using ODBC. The Dockerfile includes setup for Microsoft SQL Server drivers, which work differently on Linux (container) and Windows environments.
+
+##### Linux (Container) ODBC Setup
+
+In the Docker container (Linux-based), ODBC is configured as follows:
+
+```dockerfile
+# Install Microsoft ODBC Driver for SQL Server
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y \
+       msodbcsql18 \
+       mssql-tools18 \
+       unixodbc \
+       unixodbc-dev
+
+# Create DSN configuration
+RUN echo "[Shiny]\n\
+Driver=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.5.so.1.1\n\
+Server=shiny.database.windows.net,1433\n\
+Database=Shiny\n\
+UID=shiny\n\
+PWD=****\n\
+Encrypt=YES\n\
+TrustServerCertificate=NO\n\
+Connection Timeout=30\n\
+" > /root/.odbc.ini
+```
+
+##### Windows ODBC Setup
+
+For development on Windows, you'll need to:
+
+1. Download and install the [Microsoft ODBC Driver 18 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
+2. Configure your DSN through the Windows ODBC Data Source Administrator:
+   - Open "ODBC Data Sources (64-bit)" from Windows search
+   - Go to "User DSN" tab
+   - Click "Add" and select "ODBC Driver 18 for SQL Server"
+   - Configure with same parameters as in the Dockerfile:
+     - Name: Shiny
+     - Server: shiny.database.windows.net,1433
+     - Database: Shiny
+     - Authentication: SQL Server authentication
+
+3. In your R environment, you can test the connection with:
+
+```r
+library(odbc)
+con <- dbConnect(odbc::odbc(), "Shiny")
+```
+
+#### Building and Running Locally
+
+For local testing, you can build and run the container:
+
+```bash
+docker build -t todo-app:local .
+docker run -p 3838:3838 todo-app:local
+```
+
+To build with GitHub PATs for private repositories:
+
+```bash
+docker build --build-arg GITHUB1_PAT=your_pat_here --build-arg GITHUB2_PAT=your_other_pat_here -t todo-app:local .
+```
+
+### GitHub Actions Workflows
+
+The application uses two GitHub Actions workflows for CI/CD:
+
+#### 1. Build Docker Image
+
+The workflow defined in `.github/workflows/build-image.yml` handles building and pushing the Docker image to Azure Container Registry:
+
+- **Trigger**: Manual (workflow_dispatch)
+- **Environment Variables**:
+  - `ACR_NAME`: "rshinycr"
+  - `ACR_LOGIN_SERVER`: "rshinycr.azurecr.io"
+  - `IMAGE_NAME`: "todo-app"
+- **Process**:
+  - Logs in to Azure using service principal credentials
+  - Builds the Docker image with GitHub PATs for accessing private packages
+  - Pushes the image to Azure Container Registry
+
+#### 2. Deploy Application
+
+The workflow defined in `.github/workflows/deploy-app.yml` handles deploying the application to Azure App Service:
+
+- **Trigger**: 
+  - Push to main branch (excluding changes to Dockerfile, scripts, build workflow, and README)
+  - Manual trigger (workflow_dispatch)
+- **Environment Variables**:
+  - Resource group, location, ACR login server, etc.
+  - Azure AD authentication settings
+- **Process**:
+  - Updates container settings for the App Service
+  - Configures Key Vault references for secure access to secrets
+  - Sets up Azure AD Authentication
+  - Restarts the App Service
+  - Verifies the deployment by checking the health endpoint
+
+### Required Secrets
+
+To run the GitHub workflows, you need to configure the following secrets in your GitHub repository:
+
+- `AZURE_CREDENTIALS`: JSON credentials for Azure authentication (output by setup script)
+- `AZURE_TENANT_ID`: Your Azure tenant ID
+- `AAD_CLIENT_ID`: Azure AD application client ID
+- `GITHUB1_PAT` and `GITHUB2_PAT`: GitHub Personal Access Tokens for private package access
+
+### Azure AD Authentication
+
+The application is configured with Azure AD authentication:
+
+- Authentication is enabled using the Azure App Service AuthV2 feature
+- Microsoft identity provider is configured with your AAD client ID
+- Token audience is set to the application's API URI
+- Unauthenticated clients are redirected to the login page
+
+### Deployment Sequence
+
+The typical deployment sequence is:
+
+1. Run `scripts/setup-azure.sh` to provision the Azure infrastructure (one-time setup)
+2. Configure the required secrets in your GitHub repository
+3. Manually trigger the build workflow to build and push the Docker image
+4. Automatically or manually trigger the deploy workflow to update the App Service
+
+After deployment, your application will be available at: `https://shiny-web-app.azurewebsites.net`
+
+### Monitoring and Maintenance
+
+Once deployed, you can monitor your application using:
+
+- Azure Portal (App Service logs and metrics)
+- Application Insights (if configured)
+- Azure Container Registry for image management
+
+To update the application:
+
+1. Make changes to your code
+2. Commit and push to the main branch
+3. The deploy workflow will automatically trigger
+4. For changes to the Docker image, manually trigger the build workflow first
+
+If you need to remove the infrastructure, run `scripts/cleanup-azure.sh`
  
