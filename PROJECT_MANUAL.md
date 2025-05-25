@@ -242,15 +242,44 @@ For local development, the application uses a mock in-memory database by default
 
 ### Production Database Configuration
 
-For production deployment, the application connects to a SQL Server database using environment variables set in the container or App Service:
+For production deployment, the application connects to an Azure SQL Server database using environment variables set in the container or App Service.
 
+The database connection string parameters are:
 - DRIVER: ODBC Driver 18 for SQL Server
-- SERVER: Your database server address
-- DATABASE: Your database name
-- UID: Database username
-- PWD: Database password
+- SERVER: Your database server address (e.g., shiny.database.windows.net,1433)
+- DATABASE: Your database name (e.g., Shiny)
+- UID: Database username (provided during Azure setup)
+- PWD: Database password (provided during Azure setup)
 
-These credentials are stored securely in Azure Key Vault when deployed to Azure.
+These credentials are stored securely in Azure Key Vault when deployed to Azure. The `setup-azure.sh` script creates the Key Vault and configures the Web App to access it using managed identity.
+
+### Testing Database Connection
+
+After configuring your database connection, you can test it using:
+
+```r
+# For DSN-based connection
+library(odbc)
+con <- dbConnect(odbc::odbc(), "Shiny")
+
+# For connection string
+library(DBI)
+library(odbc)
+con <- dbConnect(odbc::odbc(),
+                 Driver = "ODBC Driver 18 for SQL Server",
+                 Server = "shiny.database.windows.net,1433",
+                 Database = "Shiny",
+                 UID = "your_username",
+                 PWD = "your_password",
+                 Encrypt = "YES",
+                 TrustServerCertificate = "NO")
+
+# Test connection
+dbListTables(con)
+
+# Don't forget to close the connection
+dbDisconnect(con)
+```
 
 ## Deploying to Azure Cloud
 
@@ -271,10 +300,31 @@ The application can be deployed to Azure using Docker containers and Azure App S
 1. **Clone the Repository** (if not already done):
    ```bash
    git clone https://github.com/FlippieCoetser/Shiny.Todo.git
-   cd Shiny.Todo
+   # Or use the actual repository URL if different:
+   # git clone <your-repository-url>
+   cd r.shiny  # Navigate to the repository folder
    ```
 
-2. **Run the Setup Script**:
+2. **Authenticate with Azure CLI**:
+   ```bash
+   # Login to Azure
+   az login
+   
+   # Verify your subscription
+   az account show
+   
+   # If you have multiple subscriptions, set the one you want to use
+   # az account set --subscription "Your Subscription Name or ID"
+   ```
+
+3. **Make Scripts Executable** (Linux/macOS/WSL):
+   ```bash
+   # Add execute permissions to the scripts
+   chmod +x scripts/setup-azure.sh
+   chmod +x scripts/cleanup-azure.sh
+   ```
+
+4. **Run the Setup Script**:
    ```bash
    # Run from bash terminal or WSL
    ./scripts/setup-azure.sh
@@ -289,18 +339,25 @@ The application can be deployed to Azure using Docker containers and Azure App S
    - Key Vault for secrets
    - Managed Identity for the Web App
 
-3. **Note the Credentials**:
+5. **Note the Credentials**:
    The script will output credentials needed for GitHub Actions. Save these for the next step.
 
 #### 2. Configure GitHub Secrets
 
-1. **Go to Your GitHub Repository**
-2. **Navigate to Settings > Secrets and Variables > Actions**
-3. **Add the Following Secrets**:
+1. **Create GitHub Personal Access Tokens (PATs)**:
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token"
+   - Give it a name and select the scopes: `repo`, `read:packages`
+   - Click "Generate token" and copy the token value
+   - Create two tokens if needed for different repositories
+
+2. **Go to Your GitHub Repository**
+3. **Navigate to Settings > Secrets and Variables > Actions**
+4. **Add the Following Secrets**:
    - `AZURE_CREDENTIALS`: JSON credentials from the setup script
    - `AZURE_TENANT_ID`: Your Azure tenant ID
    - `AAD_CLIENT_ID`: Azure AD application client ID
-   - `GITHUB1_PAT` and `GITHUB2_PAT`: GitHub Personal Access Tokens for private package access
+   - `GITHUB1_PAT` and `GITHUB2_PAT`: GitHub Personal Access Tokens created above
 
 #### 3. Build and Push the Docker Image
 
@@ -332,7 +389,10 @@ The application can be deployed to Azure using Docker containers and Azure App S
 
 2. **Access Your Application**:
    After deployment, the application will be available at:
-   `https://shiny-web-app.azurewebsites.net`
+   `https://shiny-web-app.azurewebsites.net`   To verify your application is working properly, check the health endpoint:
+   `https://shiny-web-app.azurewebsites.net/health`
+  
+   This endpoint is configured in the deploy workflow to verify successful deployment.
 
 ### Alternative: Manual Deployment
 
@@ -355,12 +415,62 @@ If you prefer to deploy manually:
    az webapp config container set --name shiny-web-app --resource-group r-shiny-rg --docker-custom-image-name rshinycr.azurecr.io/todo-app:latest
    ```
 
+### Windows PowerShell Commands
+
+For Windows users who prefer using PowerShell, here are the equivalent commands:
+
+1. **Azure CLI Login**:
+   ```powershell
+   # Login to Azure
+   az login
+   
+   # Verify your subscription
+   az account show
+   ```
+
+2. **Running Bash Scripts in PowerShell**:
+   ```powershell
+   # Using Git Bash from PowerShell
+   & 'C:\Program Files\Git\bin\bash.exe' -c './scripts/setup-azure.sh'
+   
+   # Using WSL from PowerShell
+   wsl -e ./scripts/setup-azure.sh
+   ```
+
+3. **Docker Commands**:
+   ```powershell
+   # Build Docker image
+   docker build --build-arg GITHUB1_PAT="your-pat" --build-arg GITHUB2_PAT="your-other-pat" -t todo-app:latest .
+   
+   # Run Docker container locally
+   docker run -p 3838:3838 todo-app:latest
+   ```
+
+4. **Azure Container Registry Login**:
+   ```powershell
+   # Login to ACR
+   az acr login --name rshinycr
+   
+   # Tag and push image
+   docker tag todo-app:latest rshinycr.azurecr.io/todo-app:latest
+   docker push rshinycr.azurecr.io/todo-app:latest
+   ```
+
 ### Cleanup
 
 When you're done with the environment, you can remove all resources:
 
 ```bash
 ./scripts/cleanup-azure.sh
+```
+
+Or using PowerShell:
+```powershell
+# Using Git Bash from PowerShell
+& 'C:\Program Files\Git\bin\bash.exe' -c './scripts/cleanup-azure.sh'
+
+# Using WSL from PowerShell
+wsl -e ./scripts/cleanup-azure.sh
 ```
 
 ## Monitoring and Maintenance

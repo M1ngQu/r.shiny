@@ -389,6 +389,21 @@ This application can be deployed to Azure using the provided scripts and GitHub 
 
 The project includes bash scripts to provision and manage the required Azure infrastructure:
 
+#### Prerequisites
+
+Before running the Azure setup scripts, ensure you have:
+
+1. Installed the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+2. Authenticated with Azure:
+   ```bash
+   az login
+   ```
+3. Set the proper execute permissions on the scripts (Linux/macOS/WSL):
+   ```bash
+   chmod +x scripts/setup-azure.sh
+   chmod +x scripts/cleanup-azure.sh
+   ```
+
 #### Setup Azure Resources
 
 Use the `scripts/setup-azure.sh` script to create all necessary Azure resources:
@@ -396,6 +411,11 @@ Use the `scripts/setup-azure.sh` script to create all necessary Azure resources:
 ```bash
 # Run from bash terminal or WSL
 ./scripts/setup-azure.sh
+
+# For Windows PowerShell, you can use:
+# & 'C:\Program Files\Git\bin\bash.exe' -c './scripts/setup-azure.sh'
+# or
+# wsl -e ./scripts/setup-azure.sh
 ```
 
 This script creates the following resources:
@@ -417,6 +437,11 @@ When you're done with the environment, you can remove all resources using:
 ```bash
 # Run from bash terminal or WSL
 ./scripts/cleanup-azure.sh
+
+# For Windows PowerShell, you can use:
+# & 'C:\Program Files\Git\bin\bash.exe' -c './scripts/cleanup-azure.sh'
+# or
+# wsl -e ./scripts/cleanup-azure.sh
 ```
 
 ### Containerization
@@ -580,6 +605,16 @@ To run the GitHub workflows, you need to configure the following secrets in your
 - `AAD_CLIENT_ID`: Azure AD application client ID
 - `GITHUB1_PAT` and `GITHUB2_PAT`: GitHub Personal Access Tokens for private package access
 
+#### Creating GitHub Personal Access Tokens
+
+To create the required GitHub PATs:
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token"
+3. Give it a name and select the scopes: `repo`, `read:packages`
+4. Click "Generate token" and copy the token value
+5. Add this token as a repository secret
+
 ### Azure AD Authentication
 
 The application is configured with Azure AD authentication:
@@ -599,6 +634,11 @@ The typical deployment sequence is:
 4. Automatically or manually trigger the deploy workflow to update the App Service
 
 After deployment, your application will be available at: `https://shiny-web-app.azurewebsites.net`
+
+You can verify your deployment is working properly by checking the health endpoint at:
+`https://shiny-web-app.azurewebsites.net/health`
+
+This endpoint should return an HTTP 200 status code if the application is running correctly. The deploy workflow automatically checks this endpoint as part of the deployment verification process.
 
 ### Monitoring and Maintenance
 
