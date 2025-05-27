@@ -27,7 +27,7 @@ Remotes:
     Ri-tsuka/Validate,
     Ri-tsuka/Environment,
     Ri-tsuka/Query,
-    FlippieCoetser/Storage,
+    Ri-tsuka/Storage,
     M1ngQu/r.package
 Suggests:
     shinytest2,
