@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build, Test and Push Docker Image
 
 on:
   workflow_dispatch:  # only run when manually triggered
@@ -9,8 +9,9 @@ env:
   IMAGE_NAME: "todo-app"
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,12 +21,25 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image (with tests)
         run: |
-          echo "🐳 Build and push Docker image to $ACR_LOGIN_SERVER"
+          echo "Building Docker image with test environment"
           az acr login --name $ACR_NAME
           docker build \
             --build-arg GITHUB1_PAT=${{ secrets.GITHUB1_PAT }} \
             --build-arg GITHUB2_PAT=${{ secrets.GITHUB2_PAT }} \
             -t $ACR_LOGIN_SERVER/$IMAGE_NAME:latest .
+
+      - name: Run tests inside Docker container
+        run: |
+          echo "Running R testthat & shinytest2 inside container"
+          docker run --rm \
+            -e ENVIRONMENT=ci \
+            -v ${{ github.workspace }}/tests:/tests \
+            $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
+            Rscript -e "testthat::test_dir('/tests/testthat')"
+
+      - name: Push Docker image to ACR
+        run: |
+          echo "Pushing Docker image to Azure Container Registry"
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest

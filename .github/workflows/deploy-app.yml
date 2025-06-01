@@ -39,7 +39,7 @@ jobs:
 
       - name: Update container settings for App Service
         run: |
-          echo "🔄 Update container settings for Web App"
+          echo "Update container settings for Web App"
           az webapp config container set \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
@@ -48,7 +48,7 @@ jobs:
 
       - name: Configure Key Vault references in App Service
         run: |
-          echo "🔑 Configure Key Vault references in App Service"
+          echo "Configure Key Vault references in App Service"
           az webapp config appsettings set \
             --name $WEBAPP_NAME \
             --resource-group $RESOURCE_GROUP \
@@ -57,7 +57,7 @@ jobs:
 
       - name: Configure Azure AD Authentication
         run: |
-          echo "🔐 Configure Azure AD Authentication"
+          echo "Configure Azure AD Authentication"
           echo "Enabling AuthV2 and setting token store to false"
           az webapp auth update \
             --name $WEBAPP_NAME \
@@ -84,12 +84,12 @@ jobs:
 
       - name: Restart App Service
         run: |
-          echo "🔄 Restart App Service to apply changes"
+          echo "Restart App Service to apply changes"
           az webapp restart --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP
 
       - name: Verify deployment
         run: |
-          echo "✅ Verify deployment"
+          echo "Verify deployment"
           APP_URL=$(az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --query defaultHostName -o tsv)
           echo "Application deployed at: https://$APP_URL"
           sleep 30
